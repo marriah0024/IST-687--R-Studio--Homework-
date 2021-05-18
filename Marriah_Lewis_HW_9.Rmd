@@ -1,0 +1,102 @@
+---
+title: "Homework 9"
+author: "Marriah Lewis"
+date: "12/1/2020"
+output:
+  pdf_document: default
+  html_document: default
+---
+library(e1071)
+library(ggplot2)
+library(kernlab)
+library(gridExtra)
+#Load airquality
+airdata <- data.frame(airquality)
+airdata_NA<-na.omit(airdata)
+#Create two datasets 
+Index <- sample(1:nrow(airdata_NA))
+nr <- nrow(airdata_NA)
+cutoff<-floor(3 * nr/4)
+Test_Air<- airdata_NA[Index[1:cutoff],] 
+print(Test_Air)
+#	Build	a	Model	using	KSVM	&	visualize	the	results
+predictOzone <- function(a, airdata_NA){
+  predictedOzone <- predict(a, airdata_NA)
+  results <- table(predictedOzone, airdata_NA$Ozone)
+  print(results)
+  percentCorrect <- (results[1,1]+results[2,2])/(results[1,1]+results[1,2]+results[2,1]+results[2,2])*100
+  round(percentCorrect)  
+  return(percentCorrect)
+}
+modelKSVM <- ksvm(Ozone ~ ., data = airdata_NA)
+predictOzone(modelKSVM, airdata_NA)
+modelKSVM
+#Function Root	Mean	Squared	Error
+rootSquare <- function(error)
+{
+  sqrt(mean(error^2))
+}
+modelKSVM_1 <- predict(modelKSVM, airdata_NA)
+modelKSVM.error <- (airdata_NA$Ozone - modelKSVM_1)
+rootSquare(modelKSVM.error)
+
+#Scatterplot x=Temp and y=Wind
+df<- data.frame(airdata_NA$Temp, airdata_NA$Wind,modelKSVM.error)
+plot_TempWind <- ggplot(data = df,aes(x=airdata_NA$Temp,y=airdata_NA$Wind)) + geom_point(aes(size=modelKSVM.error), color = "red") + ggtitle("KSVM Model")
+
+#e1071
+modelSVM <- svm(Ozone ~ ., data = airdata_NA)
+predictOzone(modelSVM, airdata_NA)
+
+modelSVM_1 <- predict(modelSVM, airdata_NA)
+modelSVM.error <- (airdata_NA$Ozone - modelSVM_1)
+rootSquare(modelSVM.error)
+
+df_1 <- data.frame(airdata_NA$Wind,airdata_NA$Temp,modelSVM.error)
+colnames(df_1) <- c("Wind","Temp","Error")
+plotdf1 <- ggplot(data = df_1,aes(x=airdata_NA$Temp,y=airdata_NA$Wind)) + geom_point(aes(size=modelSVM.error), color = "green") + ggtitle("SVM Model")
+plotdf1
+
+modelLM <- lm(Ozone ~., data=airdata_NA)
+
+modelLM_1 <- predict(modelLM, airdata_NA)
+modelLM.error <- (airdata_NA$Ozone - modelLM_1)
+rootSquare(modelLM.error)
+
+df_2 <- data.frame(airdata_NA$Wind,airdata_NA$Temp,modelLM.error)
+colnames(df_2) <- c("Wind","Temp","Error")
+plotdf2 <-ggplot(data = df_2,aes(x=airdata_NA$Temp,y=airdata_NA$Wind)) + geom_point(aes(size=modelLM.error), color = "blue") + ggtitle("LM Model")
+plotdf2
+
+grid.arrange(plot_TempWind,plotdf1, plotdf2, ncol = 2)
+
+#Create a goodOzone
+airdata_NA$goodOzone <- as.factor(ifelse(airdata_NA$Ozone < mean(airdata_NA$Ozone),0,1))
+x<-as.numeric(as.character(airdata_NA$goodOzone))
+modelKSVMq_1 <- ksvm(x ~ ., data = airdata_NA)
+modelKSVMPredictq<- predict(modelKSVMq_1, airdata_NA)
+modelKSVMErrorq <- (x - modelKSVMPredictq)
+#good and bad days 
+df_3 <- data.frame(airdata_NA$Wind,airdata_NA$Temp,modelKSVMErrorq)
+colnames(df_3) <- c("Wind","Temp","Error")
+plotdf3 <-ggplot(data = df_3,aes(x=airdata_NA$Temp,y=airdata_NA$Wind)) + geom_point(aes(size=modelKSVMErrorq), color = "blue") + ggtitle("KSVM Model")
+plotdf3
+#svm
+modelsvm<-svm(x ~ ., data=airdata_NA)
+model1_svm<-predict(modelsvm, airdata_NA)
+modelsvm.error<-(x-model1_svm)
+df_4 <- data.frame(airdata_NA$Wind,airdata_NA$Temp,modelsvm.error)
+colnames(df_4) <- c("Wind","Temp","Error")
+plotdf4 <-ggplot(data = df_4,aes(x=airdata_NA$Temp,y=airdata_NA$Wind)) + geom_point(aes(size=modelsvm.error), color = "green") + ggtitle("SVM Model")
+plotdf4
+#nb
+nb<- naiveBayes(goodOzone ~ ., data=airdata_NA)
+nb.error<-predict(nb, airdata_NA)
+df_5 <- data.frame(airdata_NA$Wind,airdata_NA$Temp,nb.error)
+colnames(df_5) <- c("Wind","Temp","Error")
+plotdf5 <-ggplot(data = df_5,aes(x=airdata_NA$Temp,y=airdata_NA$Wind)) + geom_point(aes( size=modelnb.error), color = red) + ggtitle("NB Model")
+plotdf5
+grid.arrage(plotdf3, plotdf4, plotdf5, ncol=2)
+
+#Step 6 Which is the better Model
+I choose KSVM because it is a better choice than the svm eventhough there is not a significant difference. The KSVM model is a better predictor. 
